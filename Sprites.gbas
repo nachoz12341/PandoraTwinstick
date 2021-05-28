@@ -1,0 +1,16 @@
+// --------------------------------- //
+// Project: TwinStick
+// Start: Friday, May 28, 2021
+// IDE Version: 15.238
+
+
+// FREE-VERSION:
+// Need Premium for Features:
+// 3D Graphics
+// Network Commands
+// INLINE C/C+++ code
+
+FUNCTION LoadSprites:
+	LOADSPRITE "Woodland_x8.png", 0	
+	LOADSPRITE "Woodland_ground.png",1
+ENDFUNCTION

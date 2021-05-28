@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<PXML xmlns="http://openpandora.org/namespaces/PXML">
+<application id="yourcompany.twinstick" appdata="yourcompany.twinstick">
+<title lang="en_US">TwinStick</title>
+<description lang="en_US">TwinStick</description>
+<version major="1" minor="0" release="0" build="1"/>
+<exec command="./pandora-exe.pnd" background="false" standalone="true" x11="req"/>
+<icon src="pandoraicon.png"/>
+    <categories>
+      <category name="Game"/>
+    </categories>
+  </application>
+</PXML>

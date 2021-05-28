@@ -1,0 +1,208 @@
+// --------------------------------- //
+// Project: TwinStick
+// Start: Thursday, May 27, 2021
+// IDE Version: 15.238
+
+
+// FREE-VERSION:
+// Need Premium for Features:
+// 3D Graphics
+// Network Commands
+// INLINE C/C+++ code
+
+//SETCURRENTDIR("Media") // go to media files
+SETSCREEN 800, 480, 0
+LIMITFPS 60, 1
+SETFONT 0, 2
+
+TYPE camera
+	x#=0.0
+	y#=0.0
+	width%=800
+	height%=480
+ENDTYPE
+
+TYPE player
+	x#	   =0.0
+	y#     =0.0
+	dir#   =0.0
+	speed# =0.0
+	bbox_width%=32
+	bbox_height%=32
+ENDTYPE
+
+TYPE bullet
+	x#	   =0.0
+	y#     =0.0
+	dir#   =0.0
+	speed# =0.0
+	bbox_width% =16
+	bbox_height%=16
+ENDTYPE
+
+
+GLOBAL cam AS camera
+
+//Stores all bullet objects
+GLOBAL bullet_list[] AS bullet
+DIM bullet_list[0]
+
+//Create a player in the middle of the screen
+GLOBAL p AS player
+p.x#=400.0
+p.y#=240.0
+
+GLOBAL shoot%=0
+LOCAL  dtime, fps, delay, ShowFPS
+GLOBAL shoot_timer
+
+LoadSprites()
+ControllerCreate()
+
+//Gameloop
+WHILE TRUE
+	
+	//Level background
+	FOR i=0 TO 2
+		FOR j=0 TO 2
+			IF Collision(i*512, j*512, 512, 512, cam.x#, cam.y#, cam.width%, cam.height%) = 1
+				DRAWSPRITE 1,i*512-cam.x#,j*512-cam.y#
+			ENDIF
+		NEXT
+	NEXT
+
+	ControllerUpdate()
+
+	PlayerUpdate(p)
+	PlayerDraw(p)
+
+	FOR i=0 TO LEN(bullet_list[])-1
+		BulletUpdate(bullet_list[i])
+		BulletDraw(bullet_list[i])
+
+		IF bullet_list[i].x#>1800 OR bullet_list[i].x#<0 OR bullet_list[i].y#>1480 OR bullet_list[i].y#<0
+			DIMDEL bullet_list[], i
+		ENDIF
+	NEXT
+
+	dtime = GETTIMER()
+
+
+	shoot_timer=MAX(shoot_timer-dtime,0)
+
+	fps = ((1000/dtime)+fps)/2
+	delay=delay+dtime
+	IF delay>1000
+		delay=0
+		ShowFPS=fps
+	ENDIF
+	PRINT "FPS:"+INTEGER(ShowFPS), 0, 0
+	
+	IF Collision(100, 100, 100, 100, cam.x#, cam.y#, cam.width%, cam.height%) = 1
+		DRAWSPRITE 0, 100-cam.x#, 100-cam.y#
+	ENDIF
+	
+	SHOWSCREEN
+WEND
+
+FUNCTION BulletUpdate: b AS bullet
+	b.x#=b.x#+(COS(b.dir#)*b.speed#)
+	b.y#=b.y#+(SIN(b.dir#)*b.speed#)
+ENDFUNCTION
+
+FUNCTION BulletDraw: b AS bullet
+	IF Collision(b.x#-(b.bbox_width%/2), b.y#-(b.bbox_height%/2), b.bbox_width%, b.bbox_height%, cam.x#, cam.y#, cam.width%, cam.height%) = 1
+		DRAWRECT b.x#-(b.bbox_width%/2)-cam.x#, b.y#-(b.bbox_height%/2)-cam.y#, b.bbox_width%, b.bbox_height%, RGB(128,128,255)
+	ENDIF
+ENDFUNCTION
+
+FUNCTION BulletCreate: x#, y#, dir#, speed#
+		LOCAL b AS bullet
+		b.x#=x#
+		b.y#=y#
+		b.speed#=speed#
+		b.dir#=dir#
+		DIMPUSH bullet_list[], b
+ENDFUNCTION
+
+FUNCTION PlayerUpdate: p AS player
+	//Reset speed to avoid sliding
+	p.speed#=0
+
+	//Analog moving
+	IF(move_x#<>0 OR move_y#<>0)
+		p.dir#=ATAN(move_y#, move_x#)
+		p.speed#=4
+	ENDIF
+
+	//Digital moving
+	IF move_up%=1 OR move_down%=1 OR move_left%=1 OR move_right%=1
+		p.dir#=ATAN(move_down%-move_up%,move_right%-move_left%)
+		p.speed#=4
+	ENDIF
+
+	//Digital shooting
+	IF (aim_up%=1 OR aim_down%=1 OR aim_left%=1 OR aim_right%=1) AND shoot_timer = 0
+		BulletCreate(p.x#, p.y#, ATAN(aim_down%-aim_up%,aim_right%-aim_left%), 6)
+		shoot_timer=250
+	ENDIF
+
+	//Analog shooting
+	IF (aim_x# <> 0 OR aim_y# <> 0) AND shoot_timer = 0
+		BulletCreate(p.x#, p.y#,ATAN(aim_y#, aim_x#) , 6)
+		shoot_timer=250
+	ENDIF
+
+	//Update position
+	p.x#=p.x#+(COS(p.dir#)*p.speed#)
+	p.y#=p.y#+(SIN(p.dir#)*p.speed#)
+	
+	//Camera update
+	cam.x#=MAX(MIN(p.x#-(cam.width%/2),1000),0)
+	cam.y#=MAX(MIN(p.y#-(cam.height%/2),1000),0)
+ENDFUNCTION
+
+FUNCTION PlayerDraw: p AS player
+	DRAWRECT p.x#-16-cam.x#, p.y#-16-cam.y#, 32, 32, RGB(255,255,255)
+ENDFUNCTION
+
+FUNCTION ControllerCreate: 
+	GLOBAL aim_x#=0.0
+	GLOBAL aim_y#=0.0
+	GLOBAL move_x#=0.0
+	GLOBAL move_y#=0.0
+	GLOBAL move_left%=0
+	GLOBAL move_right%=0
+	GLOBAL move_up%=0
+	GLOBAL move_down%=0
+	GLOBAL aim_up%=0
+	GLOBAL aim_down%=0
+	GLOBAL aim_left%=0
+	GLOBAL aim_right%=0
+ENDFUNCTION
+
+FUNCTION ControllerUpdate:
+	move_x#=GETJOYX(0)
+	move_y#=GETJOYY(0)
+
+	aim_x#=GETJOYX(1)
+	aim_y#=GETJOYY(1)
+
+	move_up%=KEY(200)
+	move_down%=KEY(208)
+	move_left%=KEY(203)
+	move_right%=KEY(205)
+
+	aim_up%=KEY(201)
+	aim_down%=KEY(209)
+	aim_left%=KEY(199)
+	aim_right%=KEY(207)
+ENDFUNCTION
+
+FUNCTION Collision: x1#, y1#, w1#, h1#, x2#, y2#, w2#, h2#
+	IF x1# < x2# + w2# AND x1# + w1# > x2# AND y1# < y2# + h2# AND y1# + h1# > y2#
+		RETURN 1
+	ENDIF
+	
+	RETURN 0
+ENDFUNCTION
